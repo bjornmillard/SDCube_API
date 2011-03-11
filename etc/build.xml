@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="SDCube_API" default="makejar" basedir="..">
+	<target name="makejar">
+		<mkdir dir="build" />
+		<jar destfile="build/SDCube_API.jar" whenmanifestonly="fail">
+			<fileset dir="bin" includes="**/*.class" />
+			<fileset dir="." includes="LICENSE.txt,COPYING.txt" />
+		</jar>
+	</target>
+</project>
