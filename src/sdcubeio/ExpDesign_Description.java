@@ -38,6 +38,7 @@ public class ExpDesign_Description {
 	private String units = "";
 	private String time = "";
 	private String time_units = "";
+	private String category = "";
 
 	/**
 	 * Constructs a description and initializes with an ID, name and value
@@ -53,9 +54,13 @@ public class ExpDesign_Description {
 	 *            "measurement", the value could be "intensity".
 	 * @param units
 	 *            The units could be "mmol", "mol", "mg", etc.
+	 * 
+	 * @param category
+	 *            Generic category marker. Example could be: ligand, drug, cell
+	 *            line, etc...
 	 */
 	public ExpDesign_Description(String type, String name, String value, String units,
-			String timeValue, String timeUnits) {
+ String timeValue, String timeUnits, String category) {
 		if (type == null)
 			type = "";
 		if (name == null)
@@ -68,6 +73,8 @@ public class ExpDesign_Description {
 			timeValue = "";
 		if (timeUnits == null)
 			timeUnits = "";
+		if (category == null)
+			category = "";
 
 		this.type = type;
 		this.name = name;
@@ -75,8 +82,10 @@ public class ExpDesign_Description {
 		this.units = units;
 		this.time = timeValue;
 		this.time_units = timeUnits;
+		this.category = category;
 	}
 	
+
 	/** Empty constructor */
 	public ExpDesign_Description() {
 	}
@@ -148,6 +157,17 @@ public class ExpDesign_Description {
 	}
 
 	/**
+	 * Get the category.
+	 * 
+	 * @return Return the unit.
+	 */
+	public String getCategory() {
+		if (category == null)
+			return "";
+		return category;
+	}
+
+	/**
 	 * Set Description type (ex: Treatment, Measurement, etc...)
 	 * 
 	 * @author Bjorn Millard param String type
@@ -197,6 +217,16 @@ public class ExpDesign_Description {
 	}
 
 	/**
+	 * Set the category.
+	 * 
+	 * @param the
+	 *            category.
+	 */
+	public void setCategory(String st) {
+		category = st;
+	}
+
+	/**
 	 * Set the time units.
 	 * 
 	 * @param the
@@ -226,9 +256,15 @@ public class ExpDesign_Description {
 				time = "";
 			if (time_units == null)
 				time_units = "";
+			if (category == null)
+				category = "";
 
-			return name + " (" + value + " " + units + ")   @t=" + time + " "
+			return category + ": " + name + " (" + value + " " + units
+					+ ")   @t=" + time + " "
 					+ time_units;
+		}
+ else if (type.equalsIgnoreCase("Measurement_Time")) {
+			return "Time Point = " + time + " " + time_units;
 		}
 		return name;
 	}
@@ -252,6 +288,8 @@ public class ExpDesign_Description {
 		if (time_units != null
 				&& !time_units.equalsIgnoreCase(desc.getTimeUnits()))
 			return false;
+		if (category != null && !category.equalsIgnoreCase(desc.getCategory()))
+			return false;
 		return true;
 	}
 	
@@ -273,7 +311,7 @@ public class ExpDesign_Description {
 	 */
 	public ExpDesign_Description getCopy() {
 		return new ExpDesign_Description(type, name, value, units, time,
-				time_units);
+				time_units, category);
 	}
 	
 }

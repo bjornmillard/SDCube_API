@@ -27,6 +27,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.Hashtable;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -96,6 +98,10 @@ public class ExpDesign_IO {
 					if (ed.getTimeUnits() != null
 							&& ed.getTimeUnits().compareTo("") != 0)
 						st+="\t\t\t<time_units>"+ed.getTimeUnits()+"</time_units>\n";	
+						if (ed.getCategory() != null
+								&& ed.getCategory().compareTo("") != 0)
+							st += "\t\t\t<category>" + ed.getCategory()
+									+ "</category>\n";
 					st += "\t\t</Descriptor>\n";
 				}
 					st += "\t</Sample>\n";
@@ -376,6 +382,118 @@ String xmlPath,
 	}
 
 	/**
+	 * Parses and returns All the unique descriptor names involved through all
+	 * the samples
+	 * 
+	 * @author Bjorn Millard
+	 * @return ArrayList<String> descNames
+	 */
+	static public ArrayList<String> parseUniqueDescriptorNames(String xmlPath) {
+
+		ArrayList<ExpDesign_Sample> samples = parseSamples(xmlPath);
+		if (samples == null || samples.size() == 0)
+			return null;
+		return getUniqueDescriptorNames(samples);
+	}
+
+	/**
+	 * Returns All the unique descriptor names involved through all the samples
+	 * 
+	 * @author Bjorn Millard
+	 * @return ArrayList<String> descNames
+	 */
+	static public ArrayList<String> getUniqueDescriptorNames(
+			ArrayList<ExpDesign_Sample> samples) {
+		ArrayList<String> names = new ArrayList<String>();
+		Hashtable<String, String> hash = new Hashtable<String, String>();
+
+		int len = samples.size();
+		for (int i = 0; i < len; i++) {
+			ArrayList<ExpDesign_Description> descs = samples.get(i)
+					.getDescriptions();
+			int num = descs.size();
+			for (int j = 0; j < num; j++) {
+				String name = descs.get(j).getName();
+				if ((name == null || name.trim().equalsIgnoreCase(""))
+						&& descs.get(j).getType()
+								.equalsIgnoreCase("Measurement_Time"))
+						name = "Measurement_Time";
+				if (hash.get(name) == null)
+					hash.put(name, name);
+			}
+		}
+
+		for (Enumeration<String> enu = hash.keys(); enu.hasMoreElements();)
+			names.add((String) enu.nextElement());
+
+		return names;
+	}
+
+	/**
+	 * Returns All the category names involved through all the samples
+	 * 
+	 * @author Bjorn Millard
+	 * @return ArrayList<String> descNames
+	 */
+	static public ArrayList<String> getUniqueCategoryNames(
+			ArrayList<ExpDesign_Sample> samples) {
+		ArrayList<String> names = new ArrayList<String>();
+		Hashtable<String, String> hash = new Hashtable<String, String>();
+
+		int len = samples.size();
+		for (int i = 0; i < len; i++) {
+			ArrayList<ExpDesign_Description> descs = samples.get(i)
+					.getDescriptions();
+			int num = descs.size();
+			for (int j = 0; j < num; j++) {
+				String name = descs.get(j).getCategory();
+
+				if (name != null)
+					if (hash.get(name) == null)
+						hash.put(name, name);
+			}
+		}
+
+		for (Enumeration<String> enu = hash.keys(); enu.hasMoreElements();)
+			names.add((String) enu.nextElement());
+
+		return names;
+	}
+
+	/**
+	 * Returns All the descriptor names of the given category
+	 * 
+	 * @author Bjorn Millard
+	 * @return ArrayList<String> descNames
+	 */
+	static public ArrayList<String> getUniqueDescriptorNamesOfCategory(
+			ArrayList<ExpDesign_Sample> samples, String category) {
+		ArrayList<String> names = new ArrayList<String>();
+		Hashtable<String, String> hash = new Hashtable<String, String>();
+
+		int len = samples.size();
+		for (int i = 0; i < len; i++) {
+			ArrayList<ExpDesign_Description> descs = samples.get(i)
+					.getDescriptions();
+			int num = descs.size();
+			for (int j = 0; j < num; j++) {
+				String name = descs.get(j).getName();
+				String cat = descs.get(j).getCategory();
+
+				if (cat != null && cat.equalsIgnoreCase(category)
+						&& name != null)
+					if (hash.get(name) == null)
+						hash.put(name, name);
+			}
+		}
+
+		for (Enumeration<String> enu = hash.keys(); enu.hasMoreElements();)
+			names.add((String) enu.nextElement());
+
+		return names;
+	}
+
+	/**
 	 * Parses and returns an ExpDesign_Description from the given XML element
 	 * block
 	 * 
@@ -390,6 +508,8 @@ String xmlPath,
 		String units = getStringValue(e, "units");
 		String timeUnits = getStringValue(e, "time_units");
 		String timeVal = getStringValue(e, "time");
+		String category = getStringValue(e, "category");
+
 
 		ExpDesign_Description unit = new ExpDesign_Description();
 		unit.setType(type);
@@ -398,6 +518,7 @@ String xmlPath,
 		unit.setUnits(units);
 		unit.setTimeUnits(timeUnits);
 		unit.setTime(timeVal);
+		unit.setCategory(category);
 		return unit;
 	}
 
