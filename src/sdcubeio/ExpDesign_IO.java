@@ -24,6 +24,7 @@ package sdcubeio;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,10 +34,18 @@ import java.util.Hashtable;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.NodeList;
+import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
 
 /**
@@ -55,19 +64,28 @@ public class ExpDesign_IO {
 	 */
 	static public void write(ExpDesign_Model model) {
 		try {
-			String xmlPath = model.getXMLpath();
+			
+			//
+			//
+				DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+				Document doc = builder.newDocument();
+				Element root = doc.createElement("sdcube");
+				
+	
+				root.setAttribute("xsi:schemaLocation", "http://pipeline.med.harvard.edu/imagerail-metadata-1.0 imagerail-metadata-1.0.xsd");
+				root.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+				root.setAttribute("xmlns", "http://pipeline.med.harvard.edu/imagerail-metadata-1.0");
+				doc.appendChild(root);
+				
 
+			String xmlPath = model.getXMLpath();
 			File f = new File(xmlPath);
 			f.createNewFile();
 			
-
-			// System.out.println("<><><> Writing new XML File:" + xmlPath);
-
-			FileWriter fstream = new FileWriter(xmlPath);
-			BufferedWriter out = new BufferedWriter(fstream);
-
-			String st = "<?xml version=\"1.0\"?>\n";
-			st += "<sdcube xsi:schemaLocation='http://pipeline.med.harvard.edu/imagerail-metadata-1.0 imagerail-metadata-1.0.xsd' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns='http://pipeline.med.harvard.edu/imagerail-metadata-1.0'>\n";
+//			FileWriter fstream = new FileWriter(xmlPath);
+//			BufferedWriter out = new BufferedWriter(fstream);
+//			String st = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
+//			st += "<sdcube xsi:schemaLocation='http://pipeline.med.harvard.edu/imagerail-metadata-1.0 imagerail-metadata-1.0.xsd' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns='http://pipeline.med.harvard.edu/imagerail-metadata-1.0'>\n";
 
 			ArrayList<ExpDesign_Sample> TheExpDesigns = model.getSamples();
 			int num = TheExpDesigns.size();
@@ -75,43 +93,102 @@ public class ExpDesign_IO {
 			for (int j = 0; j < num; j++) {
 				ExpDesign_Sample es = TheExpDesigns.get(j);
 				if (es.getDescriptions().size() > 0) {
-				st += "\t<Sample id='" + es.getId() + "'>\n";
-				ArrayList<ExpDesign_Description> edu = es.getDescriptions();
-				int numU = edu.size();
-				// description loop
-				for (int k = 0; k < numU; k++) {
-					ExpDesign_Description ed = edu.get(k);
-					st += "\t\t<Descriptor>\n";
-					if (ed.getType() != null)
-						st += "\t\t\t<type>" + ed.getType() + "</type>\n";
-					if (ed.getName() != null && ed.getName().compareTo("") != 0)
-						st += "\t\t\t<name>" + ed.getName() +"</name>\n";
-					if (ed.getValue() != null
-							&& ed.getValue().compareTo("") != 0)
-						st +="\t\t\t<value>" + ed.getValue() +"</value>\n";
-					if (ed.getUnits() != null
-							&& ed.getUnits().compareTo("") != 0)
-						st += "\t\t\t<units>"+ ed.getUnits() +"</units>\n";
-					if (ed.getTimeValue() != null
-							&& ed.getTimeValue().compareTo("") != 0)
-						st += "\t\t\t<time>" + ed.getTimeValue()+"</time>\n";
-					if (ed.getTimeUnits() != null
-							&& ed.getTimeUnits().compareTo("") != 0)
-						st+="\t\t\t<time_units>"+ed.getTimeUnits()+"</time_units>\n";	
+		            //create child element, add an attribute, and add to root
+		            Element sample = doc.createElement("Sample");
+		            sample.setAttribute("id", es.getId());
+		            root.appendChild(sample);
+		            
+	//				st += "\t<Sample id='" + es.getId() + "'>\n";
+					ArrayList<ExpDesign_Description> edu = es.getDescriptions();
+					int numU = edu.size();
+					// description loop
+					for (int k = 0; k < numU; k++) {
+						ExpDesign_Description ed = edu.get(k);
+					
+			            Element desc = doc.createElement("Descriptor");
+			            sample.appendChild(desc);
+			            
+			    
+						
+						
+						if (ed.getType() != null)
+						{
+				            Element desc2 = doc.createElement("type");
+				            desc.appendChild(desc2);
+				            Text text = doc.createTextNode(ed.getType());
+				            desc2.appendChild(text);
+						}
+							
+						if (ed.getName() != null && ed.getName().compareTo("") != 0)
+						{
+				            Element desc2 = doc.createElement("name");
+				            desc.appendChild(desc2);
+				            Text text = doc.createTextNode(ed.getName());
+				            desc2.appendChild(text);			   
+						}
+						
+						if (ed.getValue() != null
+								&& ed.getValue().compareTo("") != 0)
+						{
+						    Element desc2 = doc.createElement("value");
+				            desc.appendChild(desc2);
+				            Text text = doc.createTextNode(ed.getValue());
+				            desc2.appendChild(text);
+						}
+						
+						if (ed.getUnits() != null
+								&& ed.getUnits().compareTo("") != 0)
+						{
+						    Element desc2 = doc.createElement("units");
+				            desc.appendChild(desc2);
+				            Text text = doc.createTextNode(ed.getUnits());
+				            desc2.appendChild(text);
+						}
+						
+						if (ed.getTimeValue() != null
+								&& ed.getTimeValue().compareTo("") != 0)
+						{
+						    Element desc2 = doc.createElement("time");
+				            desc.appendChild(desc2);
+				            Text text = doc.createTextNode(ed.getTimeValue());
+				            desc2.appendChild(text);
+						}
+						
+						if (ed.getTimeUnits() != null
+								&& ed.getTimeUnits().compareTo("") != 0)
+						{
+						    Element desc2 = doc.createElement("time_units");
+				            desc.appendChild(desc2);
+				            Text text = doc.createTextNode(ed.getTimeUnits());
+				            desc2.appendChild(text);
+						}
+						
 						if (ed.getCategory() != null
-								&& ed.getCategory().compareTo("") != 0)
-							st += "\t\t\t<category>" + ed.getCategory()
-									+ "</category>\n";
-					st += "\t\t</Descriptor>\n";
+									&& ed.getCategory().compareTo("") != 0)
+						{
+						    Element desc2 = doc.createElement("category");
+				            desc.appendChild(desc2);
+				            Text text = doc.createTextNode(ed.getCategory());
+				            desc2.appendChild(text);
+						}
+							
 				}
-					st += "\t</Sample>\n";
 				}
 			}
-			st+="</sdcube>\n";
-			out.write(st);
-			out.flush();
-			out.close();
 
+			DOMSource domSource = new DOMSource(doc);
+			TransformerFactory tFactory = TransformerFactory.newInstance();
+
+			FileOutputStream out2 = new FileOutputStream(xmlPath);
+			Transformer transformer = tFactory.newTransformer();
+			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+			transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+			transformer.transform(domSource, new StreamResult(out2));
+			
+			
+			
+			
+			
 			// Encoding it to the HDF5 file
 			// H5IO h = new H5IO();
 			// h.writeFileToHDF5(xmlPath, model.getHDFpath(),

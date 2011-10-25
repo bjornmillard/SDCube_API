@@ -118,6 +118,30 @@ public class ExpDesign_Model {
 	}
 
 	/**
+	 * Removes an ExpDesign_Sample from the collection in this project.  
+	 * Note this only gets added to to the model and isnt writen out to the XML
+	 * until the write() method is called.
+	 * 
+	 * @author Bjorn Millard
+	 * @param String sampleID
+	 * @return void
+	 * */
+	public void removeSample(String id) {
+		int len = TheExpDesigns.size();
+		for(int i = 0; i < len; i++)
+		{
+			ExpDesign_Sample sam = TheExpDesigns.get(i);
+			if(sam.getId().equalsIgnoreCase(id))
+			{
+				TheExpDesigns.remove(i);
+				i--;
+				len--;
+			}
+			
+		}
+	}
+	
+	/**
 	 * Remove description from the given sample with given sampleID
 	 * 
 	 * @author Bjorn Millard
