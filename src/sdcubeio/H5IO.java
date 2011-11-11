@@ -232,11 +232,11 @@ public class H5IO<T> {
 	 * @return boolean Exists?
 	 * 
 	 */
-	public boolean existHDF5(String fName) {
+	public boolean existHDF5(String filePath) {
 		boolean result = false;
 		try {
 			// Open file using the default properties.
-			file_id = H5.H5Fopen(fName, HDF5Constants.H5F_ACC_RDWR,
+			file_id = H5.H5Fopen(filePath, HDF5Constants.H5F_ACC_RDWR,
 					HDF5Constants.H5P_DEFAULT);
 			result = true;
 		}
@@ -342,8 +342,7 @@ public class H5IO<T> {
 
 			// maximal size of String
 			int maxTextSize = 0;
-			for (int i = 0; i < dim0; i++)
- {
+			for (int i = 0; i < dim0; i++) {
 				if (text[i].length() > maxTextSize)
 					maxTextSize = text[i].length() + 1;
 			}
@@ -356,31 +355,29 @@ public class H5IO<T> {
 			H5.H5Tset_size(filetype_id, maxTextSize - 1);
 			memtype_id = H5.H5Tcopy(HDF5Constants.H5T_C_S1);
 			H5.H5Tset_size(memtype_id, maxTextSize);
-			// Create memory space. Setting maximum size to NULL sets the maximum
+			// Create memory space. Setting maximum size to NULL sets the
+			// maximum
 			// size to be the current size.
 			memspace_id = H5.H5Screate_simple(dims.length, dims, null);
 			// Create the String dataset set
 			dataset_id = H5.H5Dcreate(file_id, datasetPath, filetype_id,
-									  memspace_id, HDF5Constants.H5P_DEFAULT);
+					memspace_id, HDF5Constants.H5P_DEFAULT);
 			// Write the dataset to the dataset set.
 			for (int indx = 0; indx < dim0; indx++) {
-					for (int jndx = 0; jndx < maxTextSize; jndx++) {
+				for (int jndx = 0; jndx < maxTextSize; jndx++) {
 					if (jndx < text[indx].length())
-						dset_data[indx][jndx] = (byte) text[indx]
-									.charAt(jndx);
+						dset_data[indx][jndx] = (byte) text[indx].charAt(jndx);
 					else
 						dset_data[indx][jndx] = 0;
 				}
 			}
 			H5.H5Dwrite(dataset_id, memtype_id, HDF5Constants.H5S_ALL,
-						HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
-		}
-		catch (Exception ex) {
+					HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
+		} catch (Exception ex) {
 			logger.log(Level.SEVERE, "Cannot create '" + datasetPath, ex);
-			throw new H5IO_Exception("Cannot create '" + datasetPath
-					+ "': " + ex.getMessage());
-		}
-		finally {
+			throw new H5IO_Exception("Cannot create '" + datasetPath + "': "
+					+ ex.getMessage());
+		} finally {
 			// End access to the dataset set and release resources used by it.
 			closeDataset();
 			// Terminate access to the memory space.
