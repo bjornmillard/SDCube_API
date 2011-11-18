@@ -44,6 +44,8 @@ public class SDCube {
 	 */
 	private String sdcPath;
 
+	private SDCube_DataModule TheRootDataModule;
+
 	/**
 	 * Basic Constructor
 	 * 
@@ -52,6 +54,7 @@ public class SDCube {
 	public SDCube() {
 		TheSamples = new ArrayList<SDCube_Sample>();	
 	}
+
 
 	/**
 	 * Constructor requires the file system path to a valid SDCube HDF5 file
@@ -145,9 +148,12 @@ public class SDCube {
 		TheSamples = new ArrayList<SDCube_Sample>();
 		this.sdcPath = sdcPath;
 		// Loading the top level DataModule representing the samples
-		SDCube_DataModule TheRootDataModule = new SDCube_DataModule(sdcPath
-				+ "/Data.h5", ".");
-		TheRootDataModule.load();
+		String h5Path = sdcPath+ "/Data.h5";
+		H5IO io = new H5IO();
+		io.openHDF5(h5Path);
+		
+		TheRootDataModule = new SDCube_DataModule(h5Path, ".");
+		TheRootDataModule.load(io);
 
 		ArrayList<ExpDesign_Sample> eps = ExpDesign_IO
 				.parseSamples(sdcPath
@@ -155,20 +161,24 @@ public class SDCube {
 
 		// Now putting them all into samples
 		String[] sNames = TheRootDataModule.getSampleNames();
-		int len = sNames.length;
-		for (int i = 0; i < len; i++) {
-			SDCube_DataModule data = TheRootDataModule.getDataModule(i);
-
-			//find the expD with same ID
-			for (int j = 0; j < eps.size(); j++) {
-				if (eps.get(j).getId().trim().equals(data.getId().trim()))
-				{
-					System.out.println("Adding Sample: " + data.getId());
-					TheSamples.add(new SDCube_Sample(data, eps.get(j), data.getId()));
-					break;
+		
+		if(sNames!=null)
+		{
+			int len = sNames.length;
+			for (int i = 0; i < len; i++) {
+				SDCube_DataModule data = TheRootDataModule.getDataModule(i);
+				//find the expD with same ID
+				for (int j = 0; j < eps.size(); j++) {
+					if (eps.get(j).getId().trim().equals(data.getId().trim()))
+					{
+						// System.out.println("Adding Sample: " + data.getId());
+						TheSamples.add(new SDCube_Sample(data, eps.get(j), data.getId()));
+						break;
+					}
 				}
 			}
 		}
+		io.closeHDF5();
 	}
 	/**
 	 * Loads the current SDCube Path into the current Java SDCube object 
@@ -201,6 +211,7 @@ public class SDCube {
 		this.sdcPath = sdcubePath;
 		String h5Path = sdcPath + "/Data.h5";
 		String xmlPath = sdcPath + "/ExpDesign.xml";
+		
 		// Check if directory and files exist already... if not, create them
 		File sdcFile = new File(sdcubePath);
 		if (!sdcFile.exists())
@@ -228,9 +239,53 @@ public class SDCube {
 				}
 			}
 
+			H5IO h5 = new H5IO();
+			h5.openHDF5(h5Path);
+			
+			//Checking if samples already exist, and if so, rename new samples so dont conflict
+			int numSamples = h5.getGroupChildCount(h5Path, "./Children");
+			if(numSamples>0)
+			{
+				//rename them
+			int numS = this.TheRootDataModule.getDataModules().size();
+				for (int i = 0; i < numS; i++) {
+					SDCube_DataModule dm = TheRootDataModule.getDataModule(i);
+					String path = dm.getFilePath_Group();
+				int indStart = 11;
+					int indEnd = -1;
+					if (path.length() > indStart) {
+						int num = path.length();
+						// Getting index where child begins
+						indEnd = num - 1;
+						for (int j = indStart; j < num - 1; j++)
+		 {
+							if (path.substring(j, j + 1).equals("/")) {
+								indEnd = j;
+								break;
+							}
+						}
+					}
+					dm.replacePath(
+							"./Children/"
+									+ path.substring(indStart, indEnd + 1)
+											.trim()
+ , "./Children/"
+ + numSamples);
+					numSamples++;
+					
+				}
+			}
 
+			
 		// Writing all the data samples
-		getRootDataModule(sdcubePath).write(h5Path);
+		// TheSamples
+		if (TheRootDataModule != null)
+			TheRootDataModule.write(h5Path);
+		else
+		{
+			TheRootDataModule = new SDCube_DataModule(h5Path, ".");
+			TheRootDataModule.write(h5Path);
+		}
 
 		// Writing all the ExpDesign for the samples
 		ExpDesign_Model model = new ExpDesign_Model(sdcPath);
@@ -238,16 +293,13 @@ public class SDCube {
 
 		//Embedding the XML into the H5 file @ top level Meta group
 		try {
-			new H5IO().writeFileToHDF5(xmlPath, h5Path, "./Meta/ExpDesign.xml");
-		} catch (NullPointerException e) {
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (HDF5Exception e) {
+			h5.writeFileToHDF5(xmlPath, h5Path, "./Meta/ExpDesign.xml");
+			h5.closeHDF5();
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		h5.closeHDF5();	
+
 	}
 
 	/**

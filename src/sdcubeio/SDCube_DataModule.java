@@ -312,31 +312,20 @@ public class SDCube_DataModule {
 	public void write()
 			throws H5IO_Exception {
 
-		 // Create the file if doesnt exist
-		// try {
-		// File f = new File(FilePath_H5);
-		// if(!f.exists())
-		// f.createNewFile();
-		// } catch (IOException e1) {
-		// e1.printStackTrace();
-		// }
-		
 		H5IO io = new H5IO();
-		// Creating the inner groups
 		io.openHDF5(FilePath_H5);
-		io.createGroup(FilePath_H5, FilePath_Group + "/Children");
-		io.createGroup(FilePath_H5, FilePath_Group + "/Data");
-		io.createGroup(FilePath_H5, FilePath_Group + "/Meta");
-		io.createGroup(FilePath_H5, FilePath_Group + "/Raw");
-		io.closeHDF5();
+
+		int numSamples = io.getGroupChildCount(FilePath_H5, FilePath_Group
+				+ "/Children");
 
 		ArrayList<SDCube_DataModule> arr = TheSubSamples;
 		int len = arr.size();
 		for (int i = 0; i < len; i++)
  {
-			// Creating groups for the children
-			io.createGroup(FilePath_H5, arr.get(i).getFilePath_Group());
-			arr.get(i).write(FilePath_H5);
+			SDCube_DataModule dm = arr.get(i);
+			String path = dm.getFilePath_Group();
+
+			dm.write(FilePath_H5);
 		}
 
 		// Writing the Data Group
@@ -346,7 +335,6 @@ public class SDCube_DataModule {
 		for (int i = 0; i < numD; i++) {
 			DataObject dc = TheDataGroup.get(i);
 			String dcPath = path + "/" + dc.getName();
-
 			int rank = dc.getRank();	
 			if(rank==1)
 				io.writeDataset(FilePath_H5, dcPath, dc.getName(),
@@ -362,8 +350,6 @@ public class SDCube_DataModule {
 		for (int i = 0; i < numM; i++) {
 			DataObject dc = TheMetaGroup.get(i);
 			String dcPath = path + "/" + dc.getName();
-
-
 			int rank = dc.getRank();
 			if (rank == 1)
 				io.writeDataset(FilePath_H5, dcPath, dc.getName(),
@@ -385,6 +371,9 @@ public class SDCube_DataModule {
 		// io.writeDataset(FilePath_H5, dcPath, dc.getName(),
 //						((Data_1D) dc));
 		// }
+		
+		io.closeHDF5();
+
 	}
 	/**
 	 * Writes this DataModule object to the given SDCube HDF5 file
@@ -438,16 +427,19 @@ public class SDCube_DataModule {
 	/**
 	 *  When reading an SDCube file to create and SDCube Object, this loads all groups from the file into the Java Object.
 	 *  @author Bjorn Millard
+	 * @throws H5IO_Exception 
 	 *  */
-	public void load()
+	public void load(H5IO io) throws H5IO_Exception
 	{
-		H5IO io = new H5IO();
+
 		try {
 			loadSamples(io);
+
 		} catch (H5IO_Exception e) {
 System.out.println("**Error loading Samples");
 e.printStackTrace();
 		}
+
 
 		try {
 			loadData(io);
@@ -461,6 +453,8 @@ e.printStackTrace();
 			System.out.println("**Error loading Meta");
 			e.printStackTrace();
 		}
+		
+
 	}
 
 	/**
@@ -532,13 +526,14 @@ e.printStackTrace();
 		//Determine number of samples
 		String childPath = FilePath_Group + "/Children";
 		String[] names = io.getGroupChildNames(FilePath_H5, childPath);
+
 		if (names == null)
 			return;
 		int num = names.length;
 		for (int i = 0; i < num; i++) {
 			SDCube_DataModule mod = new SDCube_DataModule(FilePath_H5,
 					FilePath_Group + "/Children/" + names[i]);
-			mod.load();
+			mod.load(io);
 			TheSubSamples.add(mod);
 		}
 	}
@@ -614,12 +609,35 @@ e.printStackTrace();
 	public String[] getSampleNames()
 	{
 		  try {
+
 			return new H5IO().getGroupChildNames(FilePath_H5, FilePath_Group
 					+ "/Children");
 		} catch (H5IO_Exception e) {
 			System.out.println("**ERROR getting sample names**");
 			e.printStackTrace();
 		}
+		  
 		return null;
+	}
+
+	/**
+	 * Replaces a subsection of the relative H5 intrapath with a new path. This
+	 * allows for renaming and moving paths around.
+	 * 
+	 * @author BLM
+	 * @param String
+	 *            oldPath
+	 * @param String
+	 *            newPath
+	 * */
+	public void replacePath(String oldPathFragment, String newPathFrag) {
+
+		int len = TheSubSamples.size();
+		for (int i = 0; i < len; i++)
+			TheSubSamples.get(i).replacePath(oldPathFragment, newPathFrag);
+
+		String st = FilePath_Group.replaceFirst(oldPathFragment,
+				newPathFrag);
+		FilePath_Group = st;
 	}
 }
