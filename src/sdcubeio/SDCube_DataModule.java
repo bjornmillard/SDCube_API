@@ -315,9 +315,6 @@ public class SDCube_DataModule {
 		H5IO io = new H5IO();
 		io.openHDF5(FilePath_H5);
 
-		int numSamples = io.getGroupChildCount(FilePath_H5, FilePath_Group
-				+ "/Children");
-
 		ArrayList<SDCube_DataModule> arr = TheSubSamples;
 		int len = arr.size();
 		for (int i = 0; i < len; i++)
@@ -336,6 +333,7 @@ public class SDCube_DataModule {
 			DataObject dc = TheDataGroup.get(i);
 			String dcPath = path + "/" + dc.getName();
 			int rank = dc.getRank();	
+
 			if(rank==1)
 				io.writeDataset(FilePath_H5, dcPath, dc.getName(),
 						((Data_1D) dc));
@@ -350,6 +348,7 @@ public class SDCube_DataModule {
 		for (int i = 0; i < numM; i++) {
 			DataObject dc = TheMetaGroup.get(i);
 			String dcPath = path + "/" + dc.getName();
+
 			int rank = dc.getRank();
 			if (rank == 1)
 				io.writeDataset(FilePath_H5, dcPath, dc.getName(),
@@ -639,5 +638,6 @@ e.printStackTrace();
 		String st = FilePath_Group.replaceFirst(oldPathFragment,
 				newPathFrag);
 		FilePath_Group = st;
+
 	}
 }

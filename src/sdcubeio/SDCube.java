@@ -244,6 +244,7 @@ public class SDCube {
 			
 			//Checking if samples already exist, and if so, rename new samples so dont conflict
 			int numSamples = h5.getGroupChildCount(h5Path, "./Children");
+
 			if(numSamples>0)
 			{
 				//rename them
@@ -271,6 +272,8 @@ public class SDCube {
 											.trim()
  , "./Children/"
  + numSamples);
+
+
 					numSamples++;
 					
 				}

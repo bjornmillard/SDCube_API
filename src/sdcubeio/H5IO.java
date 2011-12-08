@@ -166,8 +166,11 @@ public class H5IO<T> {
 	public int getGroupChildCount(String h5Path, String pathToGroup)
 			throws H5IO_Exception {
 
-		openHDF5(h5Path);
+		if (!existsGroup(h5Path, pathToGroup))
+			return 0;
+
 		openGroup(pathToGroup);
+
 
 		long[] answer = new long[1];
 		try {
@@ -179,7 +182,6 @@ public class H5IO<T> {
 		}
 
 		closeGroup();
-		closeHDF5();
 
 		return (int) answer[0];
 	}
@@ -201,7 +203,6 @@ public class H5IO<T> {
 		if (numC == 0)
 			return null;
 
-		openHDF5(h5Path);
 		openGroup(pathToGroup);
 
 		String[] objNames = new String[numC];
@@ -213,13 +214,9 @@ public class H5IO<T> {
 		} catch (Throwable err) {
 			err.printStackTrace();
 		}
+		closeGroup();
 
-//		for (int i = 0; i < objNames.length; i++) {
-//			System.out.println("name #" + i + " = " + objNames[i]);
-		// }
 
-		closeAll();
-		openHDF5(h5Path);
 		return objNames;
 	}
 
@@ -256,7 +253,6 @@ public class H5IO<T> {
 	public boolean existsGroup(String h5FilePath, String groupPath) throws H5IO_Exception {
 		boolean result = false;
 		closeGroup();
-		// openHDF5(h5FilePath);
 		try {
 			group_id = H5.H5Gopen(getH5F_ID(), groupPath);
 			if (group_id != -1)
@@ -267,7 +263,6 @@ public class H5IO<T> {
 		} catch (Exception ex) {
 		}
 		finally{
-			// closeHDF5();
 		}
 		return result;
 	}
@@ -463,6 +458,7 @@ public class H5IO<T> {
 			// delete existing dataset
 			if (existsDataset(datasetPath))
 				removeDataset(datasetPath);
+
 
 			long counts[] = new long[maxDims.length];
 			long offsets[] = new long[maxDims.length];
@@ -805,8 +801,6 @@ public class H5IO<T> {
  long[] offsets, long count[])
 			throws Exception {
 
-		closeAll();
-		openHDF5(hdfFilePath);
 		Data_2D result = null;
 		try {
 			int count0 = (int) count[0];
@@ -878,7 +872,6 @@ public class H5IO<T> {
 		    closeFileSpace();
 		    closeFileType();
 		    closeMemSpace();
-			closeAll();
 		}
 		return result;
 
@@ -1264,13 +1257,10 @@ public class H5IO<T> {
 	 */
 	public void createDataModule_Skeleton(String hdfPath,
 			String pathOfParentGroup) throws H5IO_Exception {
-		openHDF5(hdfPath);
 		createGroup(hdfPath, pathOfParentGroup + "/Data");
 		createGroup(hdfPath, pathOfParentGroup + "/Meta");
 		createGroup(hdfPath, pathOfParentGroup + "/Raw");
 		createGroup(hdfPath, pathOfParentGroup + "/Children");
-		closeHDF5();
-
 	}
 
 	/**
@@ -1290,7 +1280,6 @@ public class H5IO<T> {
 		createAllParentGroups(h5FilePath,groupPathInsideFile);
 		
 
-		// openHDF5(h5FilePath);
 		try {
 			try {
 				group_id = H5.H5Gopen(file_id, groupPathInsideFile);
@@ -1319,8 +1308,8 @@ public class H5IO<T> {
 				throw new H5IO_Exception("Cannot close the folder: "
 						+ ex.getMessage());
 			}
+
 		}
-		// closeHDF5();
 	}
 
 
@@ -1335,7 +1324,6 @@ public class H5IO<T> {
 	public void writeDataset(String h5FilePath, String path,
 			 float[] in) throws H5IO_Exception {
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
 
 		String datasetName = getDatasetName(path);
@@ -1347,20 +1335,20 @@ public class H5IO<T> {
 		
 		// convert from primitive
 		int len = in.length;
-		Float[][] dats = new Float[len][1];
+		Float[] dats = new Float[len];
 		for (int i = 0; i < len; i++)
-			dats[i][0] = new Float(in[i]);
+			dats[i] = new Float(in[i]);
 
-		Data_2D<Float> data = new Data_2D<Float>(dats, "FLOAT", datasetName);
-		long[] dims = data.getDimensions();
+
+		DataObject dataArray = new Data_1D<Float>(dats, Data_1D.FLOAT,
+				datasetName);
+		long[] dims = dataArray.getDimensions();
 		createDataset(datasetPath, "Float", dims);
+		writeArray(path, dataArray, 0, new long[] { 0 });
 
-		// Parameter: datasetName, Data_2D, dim0, dim1, offsets
-		writeMatrix(datasetPath, data, 0, 1, new long[] { 0, 0 });
 		// Add dataset type attributes:
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_FLOAT");
 
-		closeHDF5();
 	}
 
 	/**
@@ -1374,7 +1362,6 @@ public class H5IO<T> {
 	public void writeDataset(String h5FilePath, String path,
 			 float[][] in) throws H5IO_Exception {
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
 
 		String datasetName = getDatasetName(path);
@@ -1401,7 +1388,6 @@ public class H5IO<T> {
 		// Add dataset type attributes:
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_FLOAT");
 
-		closeHDF5();
 	}
 
 	/**
@@ -1417,7 +1403,6 @@ public class H5IO<T> {
 			throws H5IO_Exception {
 	
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
 
 		String datasetName = getDatasetName(path);
@@ -1429,20 +1414,18 @@ public class H5IO<T> {
 		
 		// convert from primitive
 		int len = in.length;
-		Double[][] dats = new Double[len][1];
+		Double[] dats = new Double[len];
 		for (int i = 0; i < len; i++)
-			dats[i][0] = new Double(in[i]);
+			dats[i] = new Double(in[i]);
 
-		Data_2D<Double> data = new Data_2D<Double>(dats, "DOUBLE", datasetName);
-		long[] dims = data.getDimensions();
+		DataObject dataArray = new Data_1D<Double>(dats, Data_1D.DOUBLE,
+				datasetName);
+		long[] dims = dataArray.getDimensions();
 		createDataset(datasetPath, "Double", dims);
+		writeArray(path, dataArray, 0, new long[] { 0 });
 
-		// Parameter: datasetName, Data_2D, dim0, dim1, offsets
-		writeMatrix(datasetPath, data, 0, 1, new long[] { 0, 0 });
-		// Add dataset type attributes:
+
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_DOUBLE");
-
-		closeHDF5();
 	}
 
 	/**
@@ -1457,7 +1440,6 @@ public class H5IO<T> {
 	public void writeDataset(String h5FilePath, String path,
 			double[][] in) throws H5IO_Exception {
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
 
 		String datasetName = getDatasetName(path);
@@ -1483,7 +1465,6 @@ public class H5IO<T> {
 		// Add dataset type attributes:
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_DOUBLE");
 
-		closeHDF5();
 	}
 
 	/**
@@ -1497,7 +1478,6 @@ public class H5IO<T> {
 	public void writeDataset(String h5FilePath, String path,
 			 int[] in) throws H5IO_Exception {
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
 
 		String datasetName = getDatasetName(path);
@@ -1508,21 +1488,19 @@ public class H5IO<T> {
 		
 		// convert from primitive
 		int len = in.length;
-		Integer[][] dats = new Integer[len][1];
+		Integer[] dats = new Integer[len];
 		for (int i = 0; i < len; i++)
-			dats[i][0] = new Integer(in[i]);
+			dats[i] = new Integer(in[i]);
 
-		Data_2D<Integer> data = new Data_2D<Integer>(dats, "INTEGER",
+		DataObject dataArray = new Data_1D<Integer>(dats, Data_1D.INTEGER,
 				datasetName);
-		long[] dims = data.getDimensions();
+		long[] dims = dataArray.getDimensions();
 		createDataset(datasetPath, "Integer", dims);
+		writeArray(path, dataArray, 0, new long[] { 0 });
 
-		// Parameter: datasetName, Data_2D, dim0, dim1, offsets
-		writeMatrix(datasetPath, data, 0, 1, new long[] { 0, 0 });
 		// Add dataset type attributes:
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_INTEGER");
 
-		closeHDF5();
 	}
 
 	/**
@@ -1536,7 +1514,6 @@ public class H5IO<T> {
 	public void writeDataset(String h5FilePath, String path,
 			 int[][] in) throws H5IO_Exception {
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
 
 		String datasetName = getDatasetName(path);
@@ -1563,7 +1540,6 @@ public class H5IO<T> {
 		// Add dataset type attributes:
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_INTEGER");
 
-		closeHDF5();
 	}
 
 	/**
@@ -1577,7 +1553,6 @@ public class H5IO<T> {
 	public void writeDataset(String h5FilePath, String path,
 			short[] in) throws H5IO_Exception {
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
 
 		String datasetName = getDatasetName(path);
@@ -1588,20 +1563,19 @@ public class H5IO<T> {
 		
 		// convert from primitive
 		int len = in.length;
-		Short[][] dats = new Short[len][1];
+		Short[] dats = new Short[len];
 		for (int i = 0; i < len; i++)
-			dats[i][0] = new Short(in[i]);
+			dats[i] = new Short(in[i]);
 
-		Data_2D<Short> data = new Data_2D<Short>(dats, "SHORT", datasetName);
-		long[] dims = data.getDimensions();
+		DataObject dataArray = new Data_1D<Short>(dats, Data_1D.SHORT,
+				datasetName);
+		long[] dims = dataArray.getDimensions();
 		createDataset(datasetPath, "Byte", dims);
+		writeArray(path, dataArray, 0, new long[] { 0 });
 
-		// Parameter: datasetName, Data_2D, dim0, dim1, offsets
-		writeMatrix(datasetPath, data, 0, 1, new long[] { 0, 0 });
 		// Add dataset type attributes:
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_SHORT");
 
-		closeHDF5();
 	}
 
 	/**
@@ -1616,7 +1590,6 @@ public class H5IO<T> {
 	public void writeDataset(String h5FilePath, String path,
 			short[][] in) throws H5IO_Exception {
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
 
 
@@ -1643,7 +1616,6 @@ public class H5IO<T> {
 		// Add dataset type attributes:
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_SHORT");
 
-		closeHDF5();
 	}
 
 	/**
@@ -1658,7 +1630,6 @@ public class H5IO<T> {
 			 byte[] in) throws H5IO_Exception {
 
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
 		
 
@@ -1670,20 +1641,19 @@ public class H5IO<T> {
 		
 		// convert from primitive
 		int len = in.length;
-		Byte[][] dats = new Byte[len][1];
+		Byte[] dats = new Byte[len];
 		for (int i = 0; i < len; i++)
-			dats[i][0] = new Byte(in[i]);
+			dats[i] = new Byte(in[i]);
 
-		Data_2D<Byte> data = new Data_2D<Byte>(dats, "BYTE", datasetName);
-		long[] dims = data.getDimensions();
+		DataObject dataArray = new Data_1D<Byte>(dats, Data_1D.BYTE,
+				datasetName);
+		long[] dims = dataArray.getDimensions();
 		createDataset(datasetPath, "Byte", dims);
+		writeArray(path, dataArray, 0, new long[] { 0 });
 
-		// Parameter: datasetName, Data_2D, dim0, dim1, offsets
-		writeMatrix(datasetPath, data, 0, 1, new long[] { 0, 0 });
 		// Add dataset type attributes:
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_BYTE");
 
-		closeHDF5();
 	}
 
 	/**
@@ -1699,10 +1669,7 @@ public class H5IO<T> {
 			byte[][] in) throws H5IO_Exception {
 		
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
-		
-
 
 		String datasetName = getDatasetName(path);
 		String datasetPath = path;
@@ -1727,7 +1694,6 @@ public class H5IO<T> {
 		// Add dataset type attributes:
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_BYTE");
 
-		closeHDF5();
 	}
 
 	/**
@@ -1742,9 +1708,7 @@ public class H5IO<T> {
 	public void writeDataset(String h5FilePath, String path,
 			 String[] in) throws H5IO_Exception {
 		//Creating the parent groups of this dataset if they dont already exist
-		openHDF5(h5FilePath);
 		createAllParentGroups(h5FilePath, path);
-
 
 		String datasetPath = path;
 		//check for and remove prior dataset for overwrite
@@ -1758,8 +1722,6 @@ public class H5IO<T> {
 			dats[i] = new StringBuffer(in[i]);
 
 		writeStringDataset(datasetPath, dats);
-
-		closeHDF5();
 	}
 
 
@@ -1777,7 +1739,6 @@ public class H5IO<T> {
 		StringBuffer[] str_data;
 		try {
 			// Open an existing dataset set.
-			openHDF5(h5FilePath);
 			if (!existsDataset(datasetPath))
 				return null;
 			dataset_id = H5.H5Dopen(file_id, datasetPath);
@@ -1808,7 +1769,6 @@ public class H5IO<T> {
 				}
 				str_data[indx] = new StringBuffer(new String(tempbuf));
 			}
-			closeHDF5();
 		}
  catch (Exception ex) {
 			logger.log(Level.SEVERE, "Cannot read " + datasetPath, ex);
@@ -1816,7 +1776,6 @@ public class H5IO<T> {
 					+ "': " + ex.getMessage());
 		}
  finally {
-	 	closeAll();
 
 		}
 		return str_data;
@@ -1834,7 +1793,6 @@ public class H5IO<T> {
 			 T[] in) throws H5IO_Exception {
 		//Creating the parent groups of this dataset if they dont already exist
 		createAllParentGroups(h5FilePath, path);
-		openHDF5(h5FilePath);
 
 		String datasetPath = path;
 		//check for and remove prior dataset for overwrite
@@ -1856,7 +1814,6 @@ public class H5IO<T> {
 		// Add dataset type attributes:
 		writeAttribute(datasetPath, "dataType", "H5T_NATIVE_FLOAT");
 
-		closeHDF5();
 	}
 	/**
 	 * Writes a generic T[][] to HDF5 dataset
@@ -1869,9 +1826,8 @@ public class H5IO<T> {
 	public void writeDataset(String h5FilePath, String path, String datasetName,
 			 Data_2D dat2) throws H5IO_Exception {
 		//Creating the parent groups of this dataset if they dont already exist
-		String datasetPath = path + "/" + datasetName;
+		String datasetPath = path;
 		createAllParentGroups(h5FilePath, datasetPath);
-		openHDF5(h5FilePath);
 
 		//check for and remove prior dataset for overwrite
 		if(existsDataset(datasetPath))
@@ -1934,11 +1890,8 @@ public class H5IO<T> {
 
 			writeDataset(h5FilePath, datasetPath, arr1);
 			// Add dataset type attributes:
-			openHDF5(h5FilePath);
 			writeAttribute(datasetPath, "dataType", "H5T_NATIVE_SCHAR");
-			closeHDF5();
 		}
-		closeHDF5();
 	}
 	
 	/**
@@ -1955,78 +1908,45 @@ public class H5IO<T> {
 		//Creating the parent groups of this dataset if they dont already exist
 		createAllParentGroups(h5FilePath, path);
 		
-		openHDF5(h5FilePath);
 		String datasetPath = path;
 		//check for and remove prior dataset for overwrite
 		if(existsDataset(datasetPath))
 			removeDataset(datasetPath);
 		
-		
 		String type = dat1.getDataType();
-
 		if(type.equalsIgnoreCase("Float"))
 		{
-			Float[] arr = (Float[])dat1.getData();
-			int len = arr.length;
-			Float[][] out = new Float[len][1];
-			for (int i = 0; i < len; i++) 
-				out[i][0] = arr[i];
-			Data_2D<Float> data = new Data_2D<Float>(out, "FLOAT", datasetName);
-
-			long[] dims = data.getDimensions();
+			long[] dims = dat1.getDimensions();
 			createDataset(datasetPath, "Float", dims);
 			// Parameter: datasetName, Data_2D, dim0, dim1, offsets
-			writeMatrix(datasetPath, data, 0, 1, new long[] { 0, 0 });
+			writeArray(datasetPath, dat1, 0, new long[] { 0 });
 			// Add dataset type attributes:
 			writeAttribute(datasetPath, "dataType", "H5T_NATIVE_FLOAT");
 		}
 		else if(type.equalsIgnoreCase("Integer"))
 		{
-			Integer[] arr = (Integer[])dat1.getData();
-			int len = arr.length;
-			Integer[][] out = new Integer[len][1];
-			for (int i = 0; i < len; i++) 
-				out[i][0] = arr[i];
-			Data_2D<Integer> data = new Data_2D<Integer>(out, "INTEGER",
-					datasetName);
-			
-			long[] dims = data.getDimensions();
+			long[] dims = dat1.getDimensions();
 			createDataset(datasetPath, "Integer", dims);
 			// Parameter: datasetName, Data_2D, dim0, dim1, offsets
-			writeMatrix(datasetPath, data, 0, 1, new long[] { 0, 0 });
+			writeArray(datasetPath, dat1, 0, new long[] { 0 });
 			// Add dataset type attributes:
 			writeAttribute(datasetPath, "dataType", "H5T_NATIVE_INTEGER");
 		}
 		else if(type.equalsIgnoreCase("Double"))
 		{
-			Double[] arr = (Double[])dat1.getData();
-			int len = arr.length;
-			Double[][] out = new Double[len][1];
-			for (int i = 0; i < len; i++) 
-				out[i][0] = arr[i];
-			Data_2D<Double> data = new Data_2D<Double>(out, "DOUBLE",
-					datasetName);
-			
-			long[] dims = data.getDimensions();
+			long[] dims = dat1.getDimensions();
 			createDataset(datasetPath, "Double", dims);
 			// Parameter: datasetName, Data_2D, dim0, dim1, offsets
-			writeMatrix(datasetPath, data, 0, 1, new long[] { 0, 0 });
+			writeArray(datasetPath, dat1, 0, new long[] { 0 });
 			// Add dataset type attributes:
 			writeAttribute(datasetPath, "dataType", "H5T_NATIVE_DOUBLE");
 		}
 		else if(type.equalsIgnoreCase("Byte"))
 		{
-			Byte[] arr = (Byte[])dat1.getData();
-			int len = arr.length;
-			Byte[][] out = new Byte[len][1];
-			for (int i = 0; i < len; i++) 
-				out[i][0] = arr[i];
-			Data_2D<Byte> data = new Data_2D<Byte>(out, "BYTE", datasetName);
-			
-			long[] dims = data.getDimensions();
+			long[] dims = dat1.getDimensions();
 			createDataset(datasetPath, "Byte", dims);
 			// Parameter: datasetName, Data_2D, dim0, dim1, offsets
-			writeMatrix(datasetPath, data, 0, 1, new long[] { 0, 0 });
+			writeArray(datasetPath, dat1, 0, new long[] { 0 });
 			// Add dataset type attributes:
 			writeAttribute(datasetPath, "dataType", "H5T_NATIVE_BYTE");
 		}
@@ -2034,13 +1954,9 @@ public class H5IO<T> {
 			String[] arr = (String[]) dat1.getData();
 			writeDataset(h5FilePath, datasetPath, arr);
 			// Add dataset type attributes:
-			openHDF5(h5FilePath);
 			writeAttribute(datasetPath, "dataType", "H5T_NATIVE_SCHAR");
-			closeHDF5();
 		}
 
-
-		closeHDF5();
 	}
 	
 	
@@ -2077,15 +1993,21 @@ public void closeAll() throws H5IO_Exception
 	public Data_1D readArr(String h5FilePath, String datasetPath)
 			throws H5IO_Exception {
 		// Open the HDF5 file
-		openHDF5(h5FilePath);
 		if (existsDataset(datasetPath)) {
 			long[] dims = getDimensions(datasetPath);
+			int dimIndex = 0;
+			if (dims != null && dims.length > 0)
+				for (int i = 0; i < dims.length; i++)
+					if (dims[i] != 1) {
+						dimIndex = i;
+						break;
+					}
+
 			// Parameter: datasetName, dim0, dim1, offsets, count0, count1
 			Data_1D mat = (Data_1D) readArray(datasetPath, 0,
  0,
-					dims[0]);
+ dims[dimIndex]);
 
-			closeHDF5();
 			return mat;
 		}
 		return null;
@@ -2101,45 +2023,42 @@ public void closeAll() throws H5IO_Exception
 	 * */
 	public DataObject readDataset(String h5FilePath, String datasetPath)
 			throws H5IO_Exception {
-		// Open the HDF5 file
-		openHDF5(h5FilePath);
 		if (existsDataset(datasetPath)) {
 			long[] dims = getDimensions(datasetPath);
 			String type = getDataType(datasetPath);
+
 			DataObject mat = null;
-			if (dims.length == 2)
+			if (dims.length == 2 && (dims[0] != 1 || dims[1] != 1))
 			{
 				try {
 					mat = readMatrix(h5FilePath, datasetPath,
 							new long[] { 0, 0 }, dims);
-					closeHDF5();
 					return mat;
 				} catch (Exception e) {
 					System.err
 							.println("**ERROR reading matrix: " + datasetPath);
 					e.printStackTrace();
 				}
- finally {
-					closeHDF5();
-				}
 
-			} else if (dims.length == 1) {
+
+			} else if (dims.length == 1
+					|| (dims.length == 2 && (dims[0] == 1 || dims[1] == 1))) {
 				if (!type.equalsIgnoreCase("String")) { // data array
+				// System.out.println("Reading data array");
+
 					try {
 						mat = readArr(h5FilePath, datasetPath);
-						closeHDF5();
 						return mat;
 					} catch (Exception e) {
 						System.err.println("**ERROR reading matrix: "
 								+ datasetPath);
 						e.printStackTrace();
 					}
- finally {
-						closeHDF5();
-					}
 
 				} else // String dataset
 				{
+					// System.out.println("Reading string array");
+
 					String dsName = getDatasetName(datasetPath);
 					StringBuffer[] stb = readDataset_String(h5FilePath,
 							datasetPath);
@@ -2148,13 +2067,11 @@ public void closeAll() throws H5IO_Exception
 						data[r][0] = stb[r].toString();
 					mat = new Data_2D<String>(data, Data_2D.STRING, dsName);
 
-					closeHDF5();
 					return mat;
 
 				}
 			}
 		 }
-		closeHDF5();
 		return null;
 	}
 
@@ -2222,6 +2139,9 @@ public void closeAll() throws H5IO_Exception
 			String datasetPath) throws IOException, H5IO_Exception,
 			NullPointerException, IllegalArgumentException, HDF5Exception {
 
+		//Creating parent groups if not exist
+		createAllParentGroups(hdfFilePath, datasetPath);
+		
 		// 2^20 element buffer
 		int BUFF_SIZE = 1048576;
 		long timeStart = System.currentTimeMillis();
@@ -2279,17 +2199,10 @@ public void closeAll() throws H5IO_Exception
 				}
 			}
 		} finally {
-			try {
-				closeAll();
-				closeHDF5();
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
+
 
 		}
 
-		System.out.println("Time to Write: "
-				+ (System.currentTimeMillis() - timeStart));
 	}
 
 	/**
@@ -2389,11 +2302,6 @@ public void closeAll() throws H5IO_Exception
 					out.flush();
 					out.close();
 				}
-		    /*
-		     * Close and release resources.
-		     */
-				closeAll();
-				closeHDF5();
 
 				System.out.println("Time to Read: "
 						+ (System.currentTimeMillis() - timeStart));
